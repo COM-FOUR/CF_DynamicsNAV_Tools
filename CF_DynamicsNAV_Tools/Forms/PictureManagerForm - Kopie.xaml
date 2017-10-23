@@ -1,0 +1,120 @@
+﻿<Window x:Class="CF_DynamicsNAV_Tools.PictureManagerForm"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:Controls="clr-namespace:ExplorerTreeView.Controls" 
+             xmlns:Converters="clr-namespace:ExplorerTreeView.Converters" 
+             mc:Ignorable="d" 
+             d:DesignHeight="300" Loaded="Window_Loaded" Width="700" Height="500"
+             Title="{Binding FormTitle}"
+             Icon="pack://application:,,,/CF_DynamicsNAV_Tools;component/DirectoryExplorer/Images/downloads.ico"
+             Name="PicForm">
+    <Window.Resources>
+        <Converters:FileSystemNodeImageConverter x:Key="fileSystemNodeImageConverter"
+                                                 DriveImage="pack://application:,,,/CF_DynamicsNAV_Tools;component/DirectoryExplorer/Images/diskdrive.png"
+                                                 DirectoryImage="pack://application:,,,/CF_DynamicsNAV_Tools;component/DirectoryExplorer/Images/folder.png"/>
+        <Style TargetType="TreeViewItem">
+            <Setter Property="HeaderTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Width="18" Height="18" Stretch="Fill"
+                                           Source="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=TreeViewItem},
+                                                            Converter={StaticResource fileSystemNodeImageConverter}}"/>
+                            <TextBlock Text="{Binding}" Margin="4,0,0,0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="HeartButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Black"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Path Fill="{TemplateBinding Background}"
+        Data="M 8,0
+              A 4,4 0 0 0 0,8
+              C 2,10 8,14 8,14
+              C 8,14 12,12 16,8
+              A 4,4 0 0 0 7.8,0 
+                              "/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Window.Background>
+        <LinearGradientBrush>
+            <GradientStop Color="BlueViolet" Offset="0.5"/>
+            <GradientStop Color="LightBlue" Offset="0.1"/>
+        </LinearGradientBrush>
+    </Window.Background>
+    <DockPanel Margin="5">
+        <DockPanel DockPanel.Dock="Top">
+            <Button Style="{StaticResource HeartButtonStyle}" DockPanel.Dock="Right" Background="{Binding HeartColor, ElementName=PicForm}" Margin="3" Click="Button_Click_1"/>
+            <Button DockPanel.Dock="Right" Margin="3" Click="Button_Click_2">--></Button>
+            <TextBox Text="{Binding SelectedPathVar, ElementName=PicForm, Mode=TwoWay}" Margin="1" Opacity="0.6"/>
+        </DockPanel>
+        <DockPanel DockPanel.Dock="Bottom" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" HorizontalAlignment="Left">
+                <TextBlock Margin="3"><Run Text="Bildgröße ("/><Run Text="{Binding PictureSize}"/><Run Text="): "/></TextBlock>
+                <Slider Margin ="3" Minimum="50" Maximum="500" Width="200" Value="{Binding PictureSize}"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Click="Button_Click" Margin="3" Width="75">OK</Button>
+                <Button IsCancel="True" Margin="3" Width="75" Click="Button_Click_3">Abbrechen</Button>
+            </StackPanel>
+        </DockPanel>
+        <Controls:ExplorerTreeView x:Name="explorer" SelectedPath="{Binding SelectedPathVar, ElementName=PicForm, Mode=TwoWay}" ExplorerError="explorer_ExplorerError" SelectedItemChanged="explorer_SelectedItemChanged" Margin="3" MinWidth="200">
+            <Controls:ExplorerTreeView.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="LightBlue" Offset="1.5"/>
+                    <GradientStop Color="BlueViolet" Offset="0.2"/>
+                </LinearGradientBrush>
+            </Controls:ExplorerTreeView.Background>
+        </Controls:ExplorerTreeView>
+        <ListView x:Name="selectionlistbox" DockPanel.Dock="Right" BorderThickness="2" BorderBrush="Black" MinWidth="200" Margin="3" AllowDrop="True" DragEnter="selectionlistbox_DragEnter" Drop="selectionlistbox_Drop" DragLeave="selectionlistbox_DragLeave" PreviewMouseMove="selectionlistbox_PreviewMouseMove" PreviewMouseLeftButtonDown="selectionlistbox_PreviewMouseLeftButtonDown" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="White" Offset="1.5"/>
+                    <GradientStop Color="Blue" Offset="0.2"/>
+                </LinearGradientBrush>
+            </ListView.Background>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderThickness="2" BorderBrush="Gray" Margin="5">
+                        <Button Command="{Binding ToggleCommand}">
+                            <DockPanel Width="{Binding PictureSize, ElementName=PicForm}" Height="{Binding PictureSize, ElementName=PicForm}" Background="{Binding BackGroundColor}">
+                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding FileName}" Margin="5" HorizontalAlignment="Center"/>
+                                <Image Source="{Binding FileNameInclPath}" Margin="5"/>
+                            </DockPanel>
+                        </Button>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <ListView x:Name="fileslistbox" MinWidth="200" Margin="3" AllowDrop="True" DragEnter="fileslistbox_DragEnter" Drop="fileslistbox_Drop" DragLeave="fileslistbox_DragLeave" PreviewMouseMove="fileslistbox_PreviewMouseMove" PreviewMouseLeftButtonDown="fileslistbox_PreviewMouseLeftButtonDown" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="Blue" Offset="1.5"/>
+                    <GradientStop Color="BlueViolet" Offset="0.2"/>
+                </LinearGradientBrush>
+            </ListView.Background>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderThickness="2" BorderBrush="Gray" Margin="5">
+                        <Button Command="{Binding ToggleCommand}">
+                            <DockPanel Width="{Binding PictureSize, ElementName=PicForm}" Height="{Binding PictureSize, ElementName=PicForm}" Background="{Binding BackGroundColor}">
+                                <TextBlock DockPanel.Dock="Bottom" Text="{Binding FileName}" Margin="5" HorizontalAlignment="Center"/>
+                                <Image Source="{Binding FileNameInclPath}" Margin="5"/>
+                            </DockPanel>
+                        </Button>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        
+    </DockPanel>
+</Window>
