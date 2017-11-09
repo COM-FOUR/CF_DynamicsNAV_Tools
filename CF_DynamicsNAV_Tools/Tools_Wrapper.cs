@@ -1,22 +1,17 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-//using System.Collections;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Windows.Input;
-//using System.Windows.Media;
 using System.ComponentModel;
 using System.Net;
-//using System.Linq;
 using System.Text;
 using System.IO;
 using System.IO.Compression;
-//using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Printing;
-//using System.Xml;
-using MSXML2;
+using Com.SharpZebra;
 
 namespace CF_DynamicsNAV_Tools
 {
@@ -180,6 +175,7 @@ namespace CF_DynamicsNAV_Tools
         string GetLastErrorMessage();
         bool PrintLabel(bool directPrinting);
         bool PrintQueue();
+        void EnqueueBase64String();
     }
     #endregion
 
@@ -249,7 +245,6 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
-
         class ParamComparer : IComparer<string>
         {
             public int Compare(string p1, string p2)
@@ -652,7 +647,6 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
-
       
         public string GetTextFromXMLDOMNode(ref object node,int maxLength)
         {
@@ -1374,7 +1368,7 @@ namespace CF_DynamicsNAV_Tools
         private string LastErrorMessage = "";
         private int XOffset = 0;
         private int YOffset = 0;
-        private Queue<Image> PrinterQueue; 
+        private Queue<string> LabelQueue; 
 
         public LabelPrinting() { }
 
@@ -1384,7 +1378,7 @@ namespace CF_DynamicsNAV_Tools
             PrinterName = printerName;
             XOffset = xOffset;
             YOffset = yOffset;
-            PrinterQueue = new Queue<Image>();
+            LabelQueue = new Queue<string>();
         }
 
         public void AddToBase64String(string textPart)
@@ -1394,6 +1388,11 @@ namespace CF_DynamicsNAV_Tools
 
         public void ClearBase64String()
         {
+            Base64String = "";
+        }
+        public void EnqueueBase64String()
+        {
+            LabelQueue.Enqueue(Base64String);
             Base64String = "";
         }
 
@@ -1413,31 +1412,7 @@ namespace CF_DynamicsNAV_Tools
 
             try
             {
-                byte[] bytes = Convert.FromBase64String(Base64String);
-
-                Stream b64stream = new MemoryStream(bytes);
-
-                GZipStream zipstream = new GZipStream(b64stream, CompressionMode.Decompress);
-
-                const int size = 4096;
-                byte[] buffer = new byte[size];
-
-                MemoryStream memory = new MemoryStream();
-
-                int count = 0;
-                do
-                {
-                    count = zipstream.Read(buffer, 0, size);
-                    if (count > 0)
-                    {
-                        memory.Write(buffer, 0, count);
-                    }
-                }
-                while (count > 0);
-
-                Image label = Image.FromStream(memory);
-                
-                PrinterQueue.Enqueue(label);
+                LabelQueue.Enqueue(Base64String);
 
                 ClearBase64String();
 
@@ -1460,6 +1435,21 @@ namespace CF_DynamicsNAV_Tools
         {
             bool result = false;
 
+            switch (this.LabelFormat)
+            {
+                case "ZPL":
+                case "ZPL203": PrintZPLFileLabel();  break;
+                case "PNG": result = PrintImageFileLabel(); break;
+                default: result = PrintImageFileLabel(); break;
+            }
+            
+            return result;
+        }
+
+        private bool PrintImageFileLabel()
+        {
+            bool result = false;
+
             PrintDocument pd = new PrintDocument();
             if (PrinterName != "")
             {
@@ -1468,9 +1458,34 @@ namespace CF_DynamicsNAV_Tools
 
             pd.DefaultPageSettings.Landscape = false; //or false!
             pd.PrintPage += Pd_PrintPage;
-            
+
             pd.Print();
 
+            return result;
+        }
+        private bool PrintZPLFileLabel()
+        {
+            bool result = false;
+
+            try
+            {
+                Com.SharpZebra.Printing.PrinterSettings settings = new Com.SharpZebra.Printing.PrinterSettings();
+                settings.PrinterName = this.PrinterName;
+                //settings.PrinterPort = 9100;
+                Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
+                
+                //Com.SharpZebra.Printing.NetworkPrinter netPrinter = new Com.SharpZebra.Printing.NetworkPrinter(settings);
+                
+                byte[] bytes = DecodeBase64String(LabelQueue.Dequeue());
+
+                //netPrinter.Print(bytes);
+                spoolPrinter.Print(bytes);
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+            
             return result;
         }
 
@@ -1481,9 +1496,9 @@ namespace CF_DynamicsNAV_Tools
             m.X = m.X + XOffset;
             m.Y = m.Y + YOffset;
             
-            if (PrinterQueue.Count > 0)
+            if (LabelQueue.Count > 0)
             {
-                Image label = PrinterQueue.Dequeue();
+                Image label = Base64StringToImage(LabelQueue.Dequeue());
 
                 if ((double)label.Width / (double)label.Height > (double)m.Width / (double)m.Height) // image is wider
                 {
@@ -1494,13 +1509,78 @@ namespace CF_DynamicsNAV_Tools
                     m.Width = (int)((double)label.Width / (double)label.Height * (double)m.Height);
                 }
                 args.Graphics.DrawImage(label, m);
+                args.HasMorePages = (LabelQueue.Count > 0);
+                label.Dispose();
             }
             else
             {
                 args.Cancel = true;
             }
+        }
 
-            args.HasMorePages = (PrinterQueue.Count > 0);
+        private Image Base64StringToImage(string base64String)
+        {
+            Image label = null;
+
+            LastErrorMessage = "";
+
+            if (base64String == "")
+            {
+                return label;
+            }
+
+            try
+            {
+                byte[] bytes = DecodeBase64String(base64String);
+                MemoryStream ms = new MemoryStream(bytes);
+
+                label = Image.FromStream(ms);
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return label;
+        }
+
+        private byte[] DecodeBase64String(string base64String)
+        {
+            byte[] result = null;
+
+            try
+            {
+                byte[] bytes = Convert.FromBase64String(base64String);
+
+                Stream b64stream = new MemoryStream(bytes);
+
+                GZipStream zipstream = new GZipStream(b64stream, CompressionMode.Decompress);
+
+                const int size = 4096;
+                byte[] buffer = new byte[size];
+
+                MemoryStream memory = new MemoryStream();
+
+                int count = 0;
+                do
+                {
+                    count = zipstream.Read(buffer, 0, size);
+                    if (count > 0)
+                    {
+                        memory.Write(buffer, 0, count);
+                    }
+                }
+                while (count > 0);
+
+                result = memory.ToArray();
+            }
+            catch (Exception e )
+            {
+
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
         }
     }
     
