@@ -176,6 +176,7 @@ namespace CF_DynamicsNAV_Tools
         bool PrintLabel(bool directPrinting);
         bool PrintQueue();
         void EnqueueBase64String();
+        bool PrintZPLCodeToFile(string fileName);
     }
     #endregion
 
@@ -1450,17 +1451,26 @@ namespace CF_DynamicsNAV_Tools
         {
             bool result = false;
 
-            PrintDocument pd = new PrintDocument();
-            if (PrinterName != "")
+            try
             {
-                pd.PrinterSettings.PrinterName = PrinterName;
+                PrintDocument pd = new PrintDocument();
+                if (PrinterName != "")
+                {
+                    pd.PrinterSettings.PrinterName = PrinterName;
+                }
+
+                pd.DefaultPageSettings.Landscape = false; //or false!
+                pd.PrintPage += Pd_PrintPage;
+
+                pd.Print();
+
+                result = true;
             }
-
-            pd.DefaultPageSettings.Landscape = false; //or false!
-            pd.PrintPage += Pd_PrintPage;
-
-            pd.Print();
-
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+            
             return result;
         }
         private bool PrintZPLFileLabel()
@@ -1473,19 +1483,39 @@ namespace CF_DynamicsNAV_Tools
                 settings.PrinterName = this.PrinterName;
                 //settings.PrinterPort = 9100;
                 Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
-                
+
                 //Com.SharpZebra.Printing.NetworkPrinter netPrinter = new Com.SharpZebra.Printing.NetworkPrinter(settings);
-                
+
                 byte[] bytes = DecodeBase64String(LabelQueue.Dequeue());
 
                 //netPrinter.Print(bytes);
                 spoolPrinter.Print(bytes);
+
+                result = true;
             }
             catch (Exception e)
             {
                 LastErrorMessage = e.Message;
             }
             
+            return result;
+        }
+        public bool PrintZPLCodeToFile(string fileName)
+        {
+            bool result = false;
+
+            try
+            {
+                byte[] bytes = DecodeBase64String(LabelQueue.Dequeue());
+                File.AppendAllText(fileName, Encoding.ASCII.GetString(bytes));
+                result = true;
+            }
+            catch (Exception e)
+            {
+
+                LastErrorMessage = e.Message;
+            }
+
             return result;
         }
 
