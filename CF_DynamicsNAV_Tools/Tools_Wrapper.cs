@@ -169,14 +169,16 @@ namespace CF_DynamicsNAV_Tools
     [Guid("506399AC-E2C1-48B0-A967-341AFF971BBD")]
     public interface iLabelPrinting
     {
-        void Init(string labelFormat, string printerName, int xOffset, int yOffset);
+        void Init(string labelFormat, string printerName, string zplprinterName, int xOffset, int yOffset);
         void AddToBase64String(string textPart);
         void ClearBase64String();
         string GetLastErrorMessage();
         bool PrintLabel(bool directPrinting);
         bool PrintQueue();
-        void EnqueueBase64String();
+        void EnqueueBase64String(string labelFormat);
         bool PrintZPLCodeToFile(string fileName);
+        int GetZPLLines();
+        string GetZPLLine(int key, ref string addStr);
     }
     #endregion
 
@@ -1366,20 +1368,37 @@ namespace CF_DynamicsNAV_Tools
         private string Base64String="";
         private string LabelFormat = "";
         private string PrinterName = "";
+        private string ZPLPrinterName = "";
         private string LastErrorMessage = "";
         private int XOffset = 0;
         private int YOffset = 0;
-        private Queue<string> LabelQueue; 
+        private Queue<Label> ZPLLabelQueue;
+        private Queue<Label> ImageLabelQueue;
+        private string[] zplLines;
 
         public LabelPrinting() { }
 
-        public void Init(string labelFormat, string printerName,int xOffset,int yOffset)
+        public void Init(string labelFormat, string printerName, string zplprinterName, int xOffset,int yOffset)
         {
             LabelFormat = labelFormat;
             PrinterName = printerName;
+            ZPLPrinterName = zplprinterName;
             XOffset = xOffset;
             YOffset = yOffset;
-            LabelQueue = new Queue<string>();
+            ZPLLabelQueue = new Queue<Label>();
+            ImageLabelQueue = new Queue<Label>();
+        }
+
+        struct Label
+        {
+            public string LabelFormat;
+            public string LabelContent;
+
+            public Label(string format,string content)
+            {
+                LabelFormat = format;
+                LabelContent = content;
+            }
         }
 
         public void AddToBase64String(string textPart)
@@ -1391,9 +1410,25 @@ namespace CF_DynamicsNAV_Tools
         {
             Base64String = "";
         }
-        public void EnqueueBase64String()
+        public void EnqueueBase64String(string labelFormat)
         {
-            LabelQueue.Enqueue(Base64String);
+            if (labelFormat=="")
+            {
+                labelFormat = LabelFormat;
+            }
+
+            Label label = new Label(LabelFormat, Base64String);
+
+            switch (labelFormat)
+            {
+                case "ZPL":
+                case "ZPL203":
+                case "APPLICATION/ZPL": ZPLLabelQueue.Enqueue(label); break;
+                case "PNG":
+                case "IMAGE/PNG": ImageLabelQueue.Enqueue(label); break;
+                default: ImageLabelQueue.Enqueue(label); break;
+            }
+            //
             Base64String = "";
         }
 
@@ -1404,30 +1439,32 @@ namespace CF_DynamicsNAV_Tools
         public bool PrintLabel(bool directPrinting)
         {
             bool result = false;
-            LastErrorMessage = "";
 
-            if (Base64String =="")
-            {
-                return false;
-            }
+            MessageBox.Show("Funktion Veraltet");
+            //LastErrorMessage = "";
 
-            try
-            {
-                LabelQueue.Enqueue(Base64String);
+            //if (Base64String =="")
+            //{
+            //    return false;
+            //}
 
-                ClearBase64String();
+            //try
+            //{
+            //    LabelQueue.Enqueue(new Label(LabelFormat,Base64String));
 
-                if (directPrinting)
-                {
-                    PrintQueue();
-                }
+            //    ClearBase64String();
 
-                result = true;
-            }
-            catch (Exception e)
-            {
-                LastErrorMessage = e.Message;
-            }
+            //    if (directPrinting)
+            //    {
+            //        PrintQueue();
+            //    }
+
+            //    result = true;
+            //}
+            //catch (Exception e)
+            //{
+            //    LastErrorMessage = e.Message;
+            //}
 
             return result;
         }
@@ -1435,19 +1472,20 @@ namespace CF_DynamicsNAV_Tools
         public bool PrintQueue()
         {
             bool result = false;
-
-            switch (this.LabelFormat)
-            {
-                case "ZPL":
-                case "ZPL203": PrintZPLFileLabel();  break;
-                case "PNG": result = PrintImageFileLabel(); break;
-                default: result = PrintImageFileLabel(); break;
-            }
             
+            if (ImageLabelQueue.Count>0)
+            {
+                result = PrintImageFileLabels();
+            }
+            if (ZPLLabelQueue.Count > 0)
+            {
+                result = PrintZPLFileLabels();
+            }
+
             return result;
         }
 
-        private bool PrintImageFileLabel()
+        private bool PrintImageFileLabels()
         {
             bool result = false;
 
@@ -1473,23 +1511,46 @@ namespace CF_DynamicsNAV_Tools
             
             return result;
         }
-        private bool PrintZPLFileLabel()
+        private bool PrintZPLFileLabels()
         {
             bool result = false;
 
             try
             {
                 Com.SharpZebra.Printing.PrinterSettings settings = new Com.SharpZebra.Printing.PrinterSettings();
-                settings.PrinterName = this.PrinterName;
+                if (ZPLPrinterName!="")
+                {
+                    settings.PrinterName = this.ZPLPrinterName;
+                }
+                else
+                {
+                    settings.PrinterName = this.PrinterName;
+                }
+                
                 //settings.PrinterPort = 9100;
+                
                 Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
 
                 //Com.SharpZebra.Printing.NetworkPrinter netPrinter = new Com.SharpZebra.Printing.NetworkPrinter(settings);
 
-                byte[] bytes = DecodeBase64String(LabelQueue.Dequeue());
+                byte[] zplbytes = new byte[0];
 
-                //netPrinter.Print(bytes);
-                spoolPrinter.Print(bytes);
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    BinaryWriter bw = new BinaryWriter(ms);
+
+                    do
+                    {
+                        Label label = ZPLLabelQueue.Dequeue();
+                        byte[] bytes = DecodeBase64String(label.LabelContent);
+                        bw.Write(bytes);
+
+                    } while (ZPLLabelQueue.Count > 0);
+
+                    zplbytes = ms.ToArray();
+                }
+
+                spoolPrinter.Print(zplbytes);
 
                 result = true;
             }
@@ -1506,7 +1567,8 @@ namespace CF_DynamicsNAV_Tools
 
             try
             {
-                byte[] bytes = DecodeBase64String(LabelQueue.Dequeue());
+                Label label = ZPLLabelQueue.Dequeue();
+                byte[] bytes = DecodeBase64String(label.LabelContent);
                 File.AppendAllText(fileName, Encoding.ASCII.GetString(bytes));
                 result = true;
             }
@@ -1518,6 +1580,39 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
+        public int GetZPLLines()
+        {
+            int result = 0;
+
+            Label label = ZPLLabelQueue.Dequeue();
+            byte[] bytes = DecodeBase64String(label.LabelContent);
+            string lines = Encoding.ASCII.GetString(bytes);
+
+            zplLines = lines.Split(new string[] {"\r\n","\r","\n"},StringSplitOptions.RemoveEmptyEntries);
+            result = zplLines.Length;
+
+            return result;
+        }
+        public string GetZPLLine(int key,ref string addStr)
+        {
+            string result = "";
+            addStr = "";
+
+            string line = zplLines[key];
+
+            if (line.Length>1024)
+            {
+                result = line.Substring(0, 1024);
+                addStr = line.Substring(1024);
+            }
+            else
+            {
+                result = line;
+            }
+
+
+            return result; ;
+        }
 
         private void Pd_PrintPage(object sender, PrintPageEventArgs args)
         {
@@ -1526,28 +1621,28 @@ namespace CF_DynamicsNAV_Tools
             m.X = m.X + XOffset;
             m.Y = m.Y + YOffset;
             
-            if (LabelQueue.Count > 0)
+            if (ImageLabelQueue.Count > 0)
             {
-                Image label = Base64StringToImage(LabelQueue.Dequeue());
+                Label label = ImageLabelQueue.Dequeue();
+                Image image = Base64StringToImage(label.LabelContent);
 
-                if ((double)label.Width / (double)label.Height > (double)m.Width / (double)m.Height) // image is wider
+                if ((double)image.Width / (double)image.Height > (double)m.Width / (double)m.Height) // image is wider
                 {
-                    m.Height = (int)((double)label.Height / (double)label.Width * (double)m.Width);
+                    m.Height = (int)((double)image.Height / (double)image.Width * (double)m.Width);
                 }
                 else
                 {
-                    m.Width = (int)((double)label.Width / (double)label.Height * (double)m.Height);
+                    m.Width = (int)((double)image.Width / (double)image.Height * (double)m.Height);
                 }
-                args.Graphics.DrawImage(label, m);
-                args.HasMorePages = (LabelQueue.Count > 0);
-                label.Dispose();
+                args.Graphics.DrawImage(image, m);
+                args.HasMorePages = (ImageLabelQueue.Count > 0);
+                image.Dispose();
             }
             else
             {
                 args.Cancel = true;
             }
         }
-
         private Image Base64StringToImage(string base64String)
         {
             Image label = null;
@@ -1573,7 +1668,6 @@ namespace CF_DynamicsNAV_Tools
 
             return label;
         }
-
         private byte[] DecodeBase64String(string base64String)
         {
             byte[] result = null;
