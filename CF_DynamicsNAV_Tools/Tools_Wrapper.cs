@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Linq;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -179,6 +180,8 @@ namespace CF_DynamicsNAV_Tools
         bool PrintZPLCodeToFile(string fileName);
         int GetZPLLines();
         string GetZPLLine(int key, ref string addStr);
+        bool ImageLabelToFile(string fileName);
+        void EnqueueBase64String2(string labelFormat, string addContent);
     }
     #endregion
 
@@ -1393,11 +1396,28 @@ namespace CF_DynamicsNAV_Tools
         {
             public string LabelFormat;
             public string LabelContent;
+            public string AdditionalContent;
 
-            public Label(string format,string content)
+            public Label(string format,string content,string addContent)
             {
                 LabelFormat = format;
                 LabelContent = content;
+                AdditionalContent = addContent;
+            }
+        }
+        struct PointText
+        {
+            public string Origin;
+            public int RotationAngle;
+            public Point Point;
+            public string Text;
+
+            public PointText(string origin ,int angle,int x, int y, string text)
+            {
+                Origin = origin;
+                RotationAngle = angle;
+                Point = new Point(x, y);
+                Text = text;
             }
         }
 
@@ -1412,12 +1432,16 @@ namespace CF_DynamicsNAV_Tools
         }
         public void EnqueueBase64String(string labelFormat)
         {
+            EnqueueBase64String2(labelFormat, "");
+        }
+        public void EnqueueBase64String2(string labelFormat,string addContent)
+        {
             if (labelFormat=="")
             {
                 labelFormat = LabelFormat;
             }
 
-            Label label = new Label(LabelFormat, Base64String);
+            Label label = new Label(LabelFormat, Base64String, addContent);
 
             switch (labelFormat)
             {
@@ -1613,10 +1637,29 @@ namespace CF_DynamicsNAV_Tools
 
             return result; ;
         }
+        public bool ImageLabelToFile(string fileName)
+        {
+            bool result = false;
+            try
+            {
+                Label label = ImageLabelQueue.Dequeue();
+                Image image = Base64StringToImage(label.LabelContent);
+                
+                image.Save(fileName);
+                result = true;
+            }
+            catch (Exception e )
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
+        }
 
         private void Pd_PrintPage(object sender, PrintPageEventArgs args)
         {
             Rectangle m = args.MarginBounds;
+            Rectangle r = args.PageBounds;
 
             m.X = m.X + XOffset;
             m.Y = m.Y + YOffset;
@@ -1625,7 +1668,21 @@ namespace CF_DynamicsNAV_Tools
             {
                 Label label = ImageLabelQueue.Dequeue();
                 Image image = Base64StringToImage(label.LabelContent);
+                
+                List<PointText> texts = GetAddTexts(label.AdditionalContent);
+                List<PointText> imageTexts = texts.Where(f => f.Origin == "I").ToList<PointText>();
 
+                if (imageTexts.Count>0)
+                {
+                    using (Graphics g = Graphics.FromImage(image))
+                    {
+                        foreach (var item in imageTexts)
+                        {
+                            g.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
+                        }
+                    }
+                }
+                
                 if ((double)image.Width / (double)image.Height > (double)m.Width / (double)m.Height) // image is wider
                 {
                     m.Height = (int)((double)image.Height / (double)image.Width * (double)m.Width);
@@ -1634,7 +1691,41 @@ namespace CF_DynamicsNAV_Tools
                 {
                     m.Width = (int)((double)image.Width / (double)image.Height * (double)m.Height);
                 }
+
                 args.Graphics.DrawImage(image, m);
+
+                List<PointText> pageTexts = texts.Where(f => f.Origin != "I").ToList<PointText>();
+                if (pageTexts.Count>0)
+                {
+                    foreach (var item in pageTexts)
+                    {
+                        switch (item.Origin)
+                        {
+                            case "UL":
+                                args.Graphics.TranslateTransform(0, 0);
+                                break;
+                            case  "UR" :
+                                args.Graphics.TranslateTransform(r.Width, 0);
+                                break;
+                            case "LL":
+                                args.Graphics.TranslateTransform(0, r.Height);
+                                break;
+                            case "LR":
+                                args.Graphics.TranslateTransform(r.Width, r.Height);
+                                break;
+                            default:
+                                args.Graphics.TranslateTransform(0, 0);
+                                break;
+                        }
+                        
+                        args.Graphics.RotateTransform(item.RotationAngle);
+                        args.Graphics.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
+                        args.Graphics.ResetTransform();
+                    }
+                }
+                
+                
+
                 args.HasMorePages = (ImageLabelQueue.Count > 0);
                 image.Dispose();
             }
@@ -1702,6 +1793,31 @@ namespace CF_DynamicsNAV_Tools
             {
 
                 LastErrorMessage = e.Message;
+            }
+
+            return result;
+        }
+        private List<PointText> GetAddTexts(string text)
+        {
+            List<PointText> result = new List<PointText>();
+
+            if (text=="")
+            {
+                return result;
+            }
+
+            string[] subtexts = text.Split(new char[] { '|' });
+            foreach (var item in subtexts)
+            {
+                string[] parts = item.Split(new char[] { ',' });
+                if (parts.Length==5)
+                {
+                    string origin = parts[0];
+                    int angle = int.Parse(parts[1]);
+                    int x = int.Parse(parts[2]);
+                    int y = int.Parse(parts[3]);
+                    result.Add(new PointText(origin, angle, x, y, parts[4]));
+                }
             }
 
             return result;
