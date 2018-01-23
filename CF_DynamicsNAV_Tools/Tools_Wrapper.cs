@@ -12,17 +12,33 @@ using System.IO;
 using System.IO.Compression;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.Web;
 using Com.SharpZebra;
 
 namespace CF_DynamicsNAV_Tools
 {
     #region Interfaces
 
+    /// <summary>
+    /// Tools for Amazon-Integration into Dynamics NAV
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("FA77BFAD-3875-4A02-B9B2-B1BF7A5AE4AD")]
     public interface IAmazonTools
     {
+        /// <summary>
+        /// sorting string by BigEndian, for calculating AmazonMWS signature
+        /// </summary>
+        /// <param name="inStr">string to be sorted</param>
+        /// <returns>sorted string</returns>
         string GetByteOrder(string InStr);
+
+        /// <summary>
+        /// calculating the hash value for AmazonMWS signature
+        /// </summary>
+        /// <param name="key">secretkey for building the hash</param>
+        /// <param name="text">string for the hash to be calculated</param>
+        /// <returns>hash string</returns>
         string GetAmazonSHA256Hash(string key, string text);
         string GetUTCTimeString(string dtnow);
         string URLEncode(string toEncode);
@@ -49,10 +65,12 @@ namespace CF_DynamicsNAV_Tools
         
         bool DoOpen(string method, string url, bool async, string user, string password);
         bool DoSend(string body);
-
         void ShowXMLHTTPResponseText(MSXML2.ServerXMLHTTP60 xml);
     }
 
+    /// <summary>
+    /// Tools for MeinPaket-Integration into Dynamics NAV
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("04422467-0FBA-4A1D-B26E-8EA2C7ABEAC6")]
     public interface IMeinPaketTools
@@ -63,6 +81,9 @@ namespace CF_DynamicsNAV_Tools
         string GetSelectedHTMLText(int ptr);
     }
 
+    /// <summary>
+    /// variuos Helper classes
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("D7D5A3A2-65B6-471D-AB95-832619F79639")]
     public interface IMiscTools
@@ -72,6 +93,9 @@ namespace CF_DynamicsNAV_Tools
         string GetTextFromXMLDOMNode(ref object node, int maxLength);
     }
 
+    /// <summary>
+    /// external TextEditor for Integration in Dynamics NAV
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("D6016BFC-69B8-4174-B497-8D9500710489")]
     public interface ITextEditor
@@ -92,6 +116,9 @@ namespace CF_DynamicsNAV_Tools
         void AddAdditionalLine(string newline);
     }
 
+    /// <summary>
+    /// external Window for Selection of Pictures in Filesystem
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("9B2C7EFC-CD33-4BB1-A884-A49CEC1388BB")]
     public interface IPictureUploadManager
@@ -110,6 +137,9 @@ namespace CF_DynamicsNAV_Tools
         string GetFavorite(int favno);
     }
 
+    /// <summary>
+    /// external Window for Selection of Pictures
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("450BD7C0-4775-4666-AAB0-2E71D27DBA4C")]
     public interface IPictureSelectionManager
@@ -131,6 +161,9 @@ namespace CF_DynamicsNAV_Tools
         int GetPictureSize();
     }
 
+    /// <summary>
+    /// Tools for Up/Downloads 
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("177D0362-CBE7-43B4-960C-AA55CC83F905")]
     public interface IWebTools
@@ -143,6 +176,9 @@ namespace CF_DynamicsNAV_Tools
         bool CheckImageForBlackBorder(string filename);
     }
 
+    /// <summary>
+    /// Tools for interacting with the Filesystem
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("33574C0A-BDC7-4111-AB72-37ABEC2BDCB5")]
     public interface IFileTools
@@ -155,6 +191,9 @@ namespace CF_DynamicsNAV_Tools
         string GetDirectory(string inpath);
     }
 
+    /// <summary>
+    /// (deprecated)Tools for retrieving Amazon related Fees, (deprecated)
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("35A61A12-58E9-4253-A916-788BC6FB48D9")]
     public interface IFBAFees
@@ -166,6 +205,9 @@ namespace CF_DynamicsNAV_Tools
         bool GetDimensions(string asin, ref double length, ref double width, ref double height, ref double weight);
     }
 
+    /// <summary>
+    /// Tools for Printing Labels for integration into DynamicsNAV 
+    /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("506399AC-E2C1-48B0-A967-341AFF971BBD")]
     public interface iLabelPrinting
@@ -182,10 +224,14 @@ namespace CF_DynamicsNAV_Tools
         string GetZPLLine(int key, ref string addStr);
         bool ImageLabelToFile(string fileName);
         void EnqueueBase64String2(string labelFormat, string addContent);
+        void SetMargins(int left, int right, int top, int bottom);
     }
     #endregion
 
     #region Classes
+    /// <summary>
+    /// Tools for Amazon-Integration into Dynamics NAV
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("907E2820-81F4-45E0-B151-8311453ED37D")]
     public class AmazonTools : IAmazonTools
@@ -203,6 +249,11 @@ namespace CF_DynamicsNAV_Tools
             //requestparts = new string[1];
         }
 
+        /// <summary>
+        /// sorting string by BigEndian, for calculating AmazonMWS signature
+        /// </summary>
+        /// <param name="inStr">string to be sorted</param>
+        /// <returns>sorted string</returns>
         public string GetByteOrder(string inStr)
         {
 
@@ -235,6 +286,12 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
+        /// <summary>
+        /// calculating the hash value for AmazonMWS signature
+        /// </summary>
+        /// <param name="key">secretkey for building the hash</param>
+        /// <param name="text">string for the hash to be calculated</param>
+        /// <returns>hash string</returns>
         public string GetAmazonSHA256Hash(string key, string text)
         {
             UnicodeEncoding UE = new UnicodeEncoding();
@@ -248,6 +305,7 @@ namespace CF_DynamicsNAV_Tools
             hashValue = hashstring.ComputeHash(message);
 
             result = UTF8toASCII(System.Convert.ToBase64String(hashValue));
+            //result = System.Convert.ToBase64String(hashValue);
 
             return result;
         }
@@ -525,9 +583,11 @@ namespace CF_DynamicsNAV_Tools
         {
             MessageBox.Show(xml.responseText);
         }
-
     }
 
+    /// <summary>
+    /// Tools for MeinPaket-Integration into Dynamics NAV
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("BAE37CD7-051D-4BDF-B40B-D812B6639B0E")]
     public class MeinPaketTools : IMeinPaketTools
@@ -604,6 +664,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// variuos Helper classes
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("74F845DD-4F78-43C9-B4B2-A1E5172824A1")]
     public class MiscTools : IMiscTools
@@ -665,6 +728,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// external TextEditor for Integration in Dynamics NAV
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("3FF037F5-306B-4282-A0C7-D331E557579B")]
     public class TextEditor : ITextEditor
@@ -857,6 +923,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// external Window for Selection of Pictures in Filesystem
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("1DA231FC-87AA-430E-9795-6D224882A392")]
     public class PictureUploadManager : IPictureUploadManager
@@ -964,6 +1033,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// external Window for Selection of Pictures
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("6651762B-8364-49A4-BE7E-9EA79FDAF80B")]
     public class PictureSelectionManager : IPictureSelectionManager
@@ -1073,6 +1145,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// Tools for Up/Downloads 
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("121F018F-F173-41AA-BD75-8BEBB289C34D")]
     public class WebTools : IWebTools
@@ -1196,6 +1271,9 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// Tools for interacting with the Filesystem
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("6B2DC1E9-9CD9-4DA5-9B95-736ABE2298AC")]
     public class FileTools : IFileTools
@@ -1317,6 +1395,10 @@ namespace CF_DynamicsNAV_Tools
         }
     }
 
+    /// <summary>
+    /// (deprecated)Tools for retrieving Amazon related Fees, (deprecated)
+    /// </summary>
+    [System.Obsolete("Method of retrieving FBAFees is deprecated", false)]
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("F2EE235B-3E92-4636-80B6-F82D7FD77B41")]
     public class FBAFees : IFBAFees
@@ -1364,6 +1446,9 @@ namespace CF_DynamicsNAV_Tools
 
     }
 
+    /// <summary>
+    /// Tools for Printing Labels for integration into DynamicsNAV 
+    /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("BAF80517-EB2F-4642-AAD8-68AB3C44D548")]
     public class LabelPrinting : iLabelPrinting
@@ -1378,6 +1463,8 @@ namespace CF_DynamicsNAV_Tools
         private Queue<Label> ZPLLabelQueue;
         private Queue<Label> ImageLabelQueue;
         private string[] zplLines;
+        private Margins margins;
+        private bool marginSet = false;
 
         public LabelPrinting() { }
 
@@ -1390,6 +1477,7 @@ namespace CF_DynamicsNAV_Tools
             YOffset = yOffset;
             ZPLLabelQueue = new Queue<Label>();
             ImageLabelQueue = new Queue<Label>();
+
         }
 
         struct Label
@@ -1418,6 +1506,21 @@ namespace CF_DynamicsNAV_Tools
                 RotationAngle = angle;
                 Point = new Point(x, y);
                 Text = text;
+            }
+        }
+        struct Margins
+        {
+            public int Left;
+            public int Right;
+            public int Top;
+            public int Bottom;
+
+            public Margins(int left,int right, int top, int bottom)
+            {
+                Left = left;
+                Right = right;
+                Top = top;
+                Bottom = bottom;
             }
         }
 
@@ -1521,7 +1624,17 @@ namespace CF_DynamicsNAV_Tools
                     pd.PrinterSettings.PrinterName = PrinterName;
                 }
 
-                pd.DefaultPageSettings.Landscape = false; //or false!
+                pd.DefaultPageSettings.Landscape = false;
+
+                if (marginSet)
+                {
+                    var pagemargins = pd.PrinterSettings.DefaultPageSettings.Margins;
+                    pagemargins.Left = margins.Left;
+                    pagemargins.Right = margins.Right;
+                    pagemargins.Top = margins.Top;
+                    pagemargins.Bottom = margins.Bottom;
+                }
+
                 pd.PrintPage += Pd_PrintPage;
 
                 pd.Print();
@@ -1655,6 +1768,11 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
+        public void SetMargins(int left, int right, int top, int bottom)
+        {
+            margins = new Margins(left,right,top,bottom);
+            marginSet = true;
+        }
 
         private void Pd_PrintPage(object sender, PrintPageEventArgs args)
         {
@@ -1682,7 +1800,7 @@ namespace CF_DynamicsNAV_Tools
                         }
                     }
                 }
-                
+
                 if ((double)image.Width / (double)image.Height > (double)m.Width / (double)m.Height) // image is wider
                 {
                     m.Height = (int)((double)image.Height / (double)image.Width * (double)m.Width);
@@ -1693,6 +1811,7 @@ namespace CF_DynamicsNAV_Tools
                 }
 
                 args.Graphics.DrawImage(image, m);
+                //args.Graphics.DrawImage(image, r);
 
                 List<PointText> pageTexts = texts.Where(f => f.Origin != "I").ToList<PointText>();
                 if (pageTexts.Count>0)
@@ -1823,10 +1942,12 @@ namespace CF_DynamicsNAV_Tools
             return result;
         }
     }
-    
     #endregion
 
     #region misc classes
+    /// <summary>
+    /// DataModel for picture selection
+    /// </summary>
     public class ImageEntry : INotifyPropertyChanged
     {
         string id = "";
@@ -1905,6 +2026,9 @@ namespace CF_DynamicsNAV_Tools
                 this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
         }
     }
+    /// <summary>
+    /// implementation of ICommand, for binding purposes
+    /// </summary>
     public class RelayCommand : ICommand
     {
         #region Fields
