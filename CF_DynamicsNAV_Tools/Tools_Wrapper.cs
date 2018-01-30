@@ -1628,11 +1628,10 @@ namespace CF_DynamicsNAV_Tools
 
                 if (marginSet)
                 {
-                    var pagemargins = pd.PrinterSettings.DefaultPageSettings.Margins;
-                    pagemargins.Left = margins.Left;
-                    pagemargins.Right = margins.Right;
-                    pagemargins.Top = margins.Top;
-                    pagemargins.Bottom = margins.Bottom;
+                    pd.PrinterSettings.DefaultPageSettings.Margins.Left = margins.Left;
+                    pd.PrinterSettings.DefaultPageSettings.Margins.Right = margins.Right;
+                    pd.PrinterSettings.DefaultPageSettings.Margins.Top = margins.Top;
+                    pd.PrinterSettings.DefaultPageSettings.Margins.Bottom = margins.Bottom;
                 }
 
                 pd.PrintPage += Pd_PrintPage;
@@ -1675,15 +1674,19 @@ namespace CF_DynamicsNAV_Tools
                 using (MemoryStream ms = new MemoryStream())
                 {
                     BinaryWriter bw = new BinaryWriter(ms);
-
                     do
                     {
                         Label label = ZPLLabelQueue.Dequeue();
                         byte[] bytes = DecodeBase64String(label.LabelContent);
+                        string text = Encoding.ASCII.GetString(bytes);
+                        string[] textarray = text.Split(new[] { "\n" },StringSplitOptions.RemoveEmptyEntries);
+                        textarray[textarray.Length-1] = label.AdditionalContent.Replace("|","\n")+ Environment.NewLine + "^XZ\n";
+                        text = string.Join("\n",textarray);
+                        bytes = Encoding.ASCII.GetBytes(text);
                         bw.Write(bytes);
-
+                        
                     } while (ZPLLabelQueue.Count > 0);
-
+                    
                     zplbytes = ms.ToArray();
                 }
 
@@ -1776,82 +1779,90 @@ namespace CF_DynamicsNAV_Tools
 
         private void Pd_PrintPage(object sender, PrintPageEventArgs args)
         {
-            Rectangle m = args.MarginBounds;
-            Rectangle r = args.PageBounds;
-
-            m.X = m.X + XOffset;
-            m.Y = m.Y + YOffset;
-            
-            if (ImageLabelQueue.Count > 0)
+            try
             {
-                Label label = ImageLabelQueue.Dequeue();
-                Image image = Base64StringToImage(label.LabelContent);
-                
-                List<PointText> texts = GetAddTexts(label.AdditionalContent);
-                List<PointText> imageTexts = texts.Where(f => f.Origin == "I").ToList<PointText>();
+                Rectangle m = args.MarginBounds;
+                Rectangle r = args.PageBounds;
 
-                if (imageTexts.Count>0)
+                m.X = m.X + XOffset;
+                m.Y = m.Y + YOffset;
+
+                if (ImageLabelQueue.Count > 0)
                 {
-                    using (Graphics g = Graphics.FromImage(image))
+                    Label label = ImageLabelQueue.Dequeue();
+                    Image image = Base64StringToImage(label.LabelContent);
+
+                    List<PointText> texts = GetAddTexts(label.AdditionalContent);
+                    List<PointText> imageTexts = texts.Where(f => f.Origin == "I").ToList<PointText>();
+
+                    if (imageTexts.Count > 0)
                     {
-                        foreach (var item in imageTexts)
+                        using (Graphics g = Graphics.FromImage(image))
                         {
-                            g.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
+                            foreach (var item in imageTexts)
+                            {
+                                g.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
+                            }
                         }
                     }
-                }
 
-                if ((double)image.Width / (double)image.Height > (double)m.Width / (double)m.Height) // image is wider
-                {
-                    m.Height = (int)((double)image.Height / (double)image.Width * (double)m.Width);
+                    if ((double)image.Width / (double)image.Height > (double)m.Width / (double)m.Height) // image is wider
+                    {
+                        m.Height = (int)((double)image.Height / (double)image.Width * (double)m.Width);
+                    }
+                    else
+                    {
+                        m.Width = (int)((double)image.Width / (double)image.Height * (double)m.Height);
+                    }
+
+                    args.Graphics.DrawImage(image, m);
+                    //args.Graphics.DrawImage(image, r);
+
+                    List<PointText> pageTexts = texts.Where(f => f.Origin != "I").ToList<PointText>();
+                    if (pageTexts.Count > 0)
+                    {
+                        foreach (var item in pageTexts)
+                        {
+                            switch (item.Origin)
+                            {
+                                case "UL":
+                                    args.Graphics.TranslateTransform(0, 0);
+                                    break;
+                                case "UR":
+                                    args.Graphics.TranslateTransform(r.Width, 0);
+                                    break;
+                                case "LL":
+                                    args.Graphics.TranslateTransform(0, r.Height);
+                                    break;
+                                case "LR":
+                                    args.Graphics.TranslateTransform(r.Width, r.Height);
+                                    break;
+                                default:
+                                    args.Graphics.TranslateTransform(0, 0);
+                                    break;
+                            }
+
+                            args.Graphics.RotateTransform(item.RotationAngle);
+                            args.Graphics.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
+                            args.Graphics.ResetTransform();
+                        }
+                    }
+
+
+
+                    args.HasMorePages = (ImageLabelQueue.Count > 0);
+                    image.Dispose();
                 }
                 else
                 {
-                    m.Width = (int)((double)image.Width / (double)image.Height * (double)m.Height);
+                    args.Cancel = true;
                 }
-
-                args.Graphics.DrawImage(image, m);
-                //args.Graphics.DrawImage(image, r);
-
-                List<PointText> pageTexts = texts.Where(f => f.Origin != "I").ToList<PointText>();
-                if (pageTexts.Count>0)
-                {
-                    foreach (var item in pageTexts)
-                    {
-                        switch (item.Origin)
-                        {
-                            case "UL":
-                                args.Graphics.TranslateTransform(0, 0);
-                                break;
-                            case  "UR" :
-                                args.Graphics.TranslateTransform(r.Width, 0);
-                                break;
-                            case "LL":
-                                args.Graphics.TranslateTransform(0, r.Height);
-                                break;
-                            case "LR":
-                                args.Graphics.TranslateTransform(r.Width, r.Height);
-                                break;
-                            default:
-                                args.Graphics.TranslateTransform(0, 0);
-                                break;
-                        }
-                        
-                        args.Graphics.RotateTransform(item.RotationAngle);
-                        args.Graphics.DrawString(item.Text, new Font("Arial", 8), new SolidBrush(Color.Black), item.Point);
-                        args.Graphics.ResetTransform();
-                    }
-                }
-                
-                
-
-                args.HasMorePages = (ImageLabelQueue.Count > 0);
-                image.Dispose();
             }
-            else
+            catch (Exception e)
             {
-                args.Cancel = true;
+                LastErrorMessage = e.Message;
             }
+            
         }
         private Image Base64StringToImage(string base64String)
         {
