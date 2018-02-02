@@ -1677,12 +1677,16 @@ namespace CF_DynamicsNAV_Tools
                     do
                     {
                         Label label = ZPLLabelQueue.Dequeue();
-                        byte[] bytes = DecodeBase64String(label.LabelContent);
-                        string text = Encoding.ASCII.GetString(bytes);
-                        string[] textarray = text.Split(new[] { "\n" },StringSplitOptions.RemoveEmptyEntries);
-                        textarray[textarray.Length-1] = label.AdditionalContent.Replace("|","\n")+ Environment.NewLine + "^XZ\n";
-                        text = string.Join("\n",textarray);
-                        bytes = Encoding.ASCII.GetBytes(text);
+                        //byte[] bytes = DecodeBase64String(label.LabelContent);
+
+                        //string text = Encoding.ASCII.GetString(bytes);
+                        //string[] textarray = text.Split(new[] { "\n" },StringSplitOptions.RemoveEmptyEntries);
+                        //textarray[textarray.Length-1] = label.AdditionalContent.Replace("|","\n")+ Environment.NewLine + "^XZ\n";
+                        //text = string.Join("\n",textarray);
+                        //bytes = Encoding.ASCII.GetBytes(text);
+
+                        byte[] bytes = ProcessZPLLabel(label);
+
                         bw.Write(bytes);
                         
                     } while (ZPLLabelQueue.Count > 0);
@@ -1708,7 +1712,9 @@ namespace CF_DynamicsNAV_Tools
             try
             {
                 Label label = ZPLLabelQueue.Dequeue();
-                byte[] bytes = DecodeBase64String(label.LabelContent);
+                //byte[] bytes = DecodeBase64String(label.LabelContent);
+                byte[] bytes = ProcessZPLLabel(label);
+
                 File.AppendAllText(fileName, Encoding.ASCII.GetString(bytes));
                 result = true;
             }
@@ -1951,6 +1957,18 @@ namespace CF_DynamicsNAV_Tools
             }
 
             return result;
+        }
+        private byte[] ProcessZPLLabel(Label label)
+        {
+            byte[] bytes = DecodeBase64String(label.LabelContent);
+
+            string text = Encoding.ASCII.GetString(bytes);
+            string[] textarray = text.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            textarray[textarray.Length - 1] = label.AdditionalContent.Replace("|", "\n") + Environment.NewLine + "^XZ\n";
+            text = string.Join("\n", textarray);
+            bytes = Encoding.ASCII.GetBytes(text);
+
+            return bytes;
         }
     }
     #endregion
