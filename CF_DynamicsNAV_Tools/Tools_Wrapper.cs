@@ -1602,17 +1602,17 @@ namespace CF_DynamicsNAV_Tools
             
             if (ImageLabelQueue.Count>0)
             {
-                result = PrintImageFileLabels();
+                result = PrintImageLabels();
             }
             if (ZPLLabelQueue.Count > 0)
             {
-                result = PrintZPLFileLabels();
+                result = PrintZPLLabels();
             }
 
             return result;
         }
 
-        private bool PrintImageFileLabels()
+        private bool PrintImageLabels()
         {
             bool result = false;
 
@@ -1647,7 +1647,7 @@ namespace CF_DynamicsNAV_Tools
             
             return result;
         }
-        private bool PrintZPLFileLabels()
+        private bool PrintZPLLabels()
         {
             bool result = false;
 
@@ -1715,7 +1715,8 @@ namespace CF_DynamicsNAV_Tools
                 //byte[] bytes = DecodeBase64String(label.LabelContent);
                 byte[] bytes = ProcessZPLLabel(label);
 
-                File.AppendAllText(fileName, Encoding.ASCII.GetString(bytes));
+                //File.AppendAllText(fileName, Encoding.ASCII.GetString(bytes));
+                File.WriteAllBytes(fileName, bytes);
                 result = true;
             }
             catch (Exception e)
