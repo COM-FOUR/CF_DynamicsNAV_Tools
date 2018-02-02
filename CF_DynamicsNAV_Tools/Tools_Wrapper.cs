@@ -225,6 +225,7 @@ namespace CF_DynamicsNAV_Tools
         bool ImageLabelToFile(string fileName);
         void EnqueueBase64String2(string labelFormat, string addContent);
         void SetMargins(int left, int right, int top, int bottom);
+        bool PrintLabelFromFile(string fileName);
     }
     #endregion
 
@@ -1653,21 +1654,17 @@ namespace CF_DynamicsNAV_Tools
 
             try
             {
-                Com.SharpZebra.Printing.PrinterSettings settings = new Com.SharpZebra.Printing.PrinterSettings();
-                if (ZPLPrinterName!="")
-                {
-                    settings.PrinterName = this.ZPLPrinterName;
-                }
-                else
-                {
-                    settings.PrinterName = this.PrinterName;
-                }
+                //Com.SharpZebra.Printing.PrinterSettings settings = new Com.SharpZebra.Printing.PrinterSettings();
+                //if (ZPLPrinterName!="")
+                //{
+                //    settings.PrinterName = this.ZPLPrinterName;
+                //}
+                //else
+                //{
+                //    settings.PrinterName = this.PrinterName;
+                //}
                 
-                //settings.PrinterPort = 9100;
-                
-                Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
-
-                //Com.SharpZebra.Printing.NetworkPrinter netPrinter = new Com.SharpZebra.Printing.NetworkPrinter(settings);
+                //Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
 
                 byte[] zplbytes = new byte[0];
 
@@ -1694,9 +1691,10 @@ namespace CF_DynamicsNAV_Tools
                     zplbytes = ms.ToArray();
                 }
 
-                spoolPrinter.Print(zplbytes);
+                //spoolPrinter.Print(zplbytes);
 
-                result = true;
+                //result = true;
+                result = PrintZPLBytes(zplbytes);
             }
             catch (Exception e)
             {
@@ -1783,7 +1781,31 @@ namespace CF_DynamicsNAV_Tools
             margins = new Margins(left,right,top,bottom);
             marginSet = true;
         }
+        public bool PrintLabelFromFile(string fileName)
+        {
+            bool result = false;
 
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(fileName);
+                FileInfo fi = new FileInfo(fileName);
+
+                switch (fi.Extension)
+                {
+                    case "png" : break;
+                    case "txt":
+                    case "zpl":  result = PrintZPLBytes(bytes); break;
+                    default:
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
+        }
         private void Pd_PrintPage(object sender, PrintPageEventArgs args)
         {
             try
@@ -1970,6 +1992,34 @@ namespace CF_DynamicsNAV_Tools
             bytes = Encoding.ASCII.GetBytes(text);
 
             return bytes;
+        }
+        private bool PrintZPLBytes(byte[] bytes)
+        {
+            bool result = false;
+
+            try
+            {
+                Com.SharpZebra.Printing.PrinterSettings settings = new Com.SharpZebra.Printing.PrinterSettings();
+                if (ZPLPrinterName != "")
+                {
+                    settings.PrinterName = this.ZPLPrinterName;
+                }
+                else
+                {
+                    settings.PrinterName = this.PrinterName;
+                }
+
+                Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
+                spoolPrinter.Print(bytes);
+
+                result = true;
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
         }
     }
     #endregion
