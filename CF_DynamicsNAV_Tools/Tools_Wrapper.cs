@@ -226,6 +226,7 @@ namespace CF_DynamicsNAV_Tools
         void EnqueueBase64String2(string labelFormat, string addContent);
         void SetMargins(int left, int right, int top, int bottom);
         bool PrintLabelFromFile(string fileName);
+        void EnqueueString(string labelFormat);
     }
     #endregion
 
@@ -1486,12 +1487,14 @@ namespace CF_DynamicsNAV_Tools
             public string LabelFormat;
             public string LabelContent;
             public string AdditionalContent;
+            public bool isBase64;
 
-            public Label(string format,string content,string addContent)
+            public Label(string format,string content,string addContent,bool base64)
             {
                 LabelFormat = format;
                 LabelContent = content;
                 AdditionalContent = addContent;
+                isBase64 = base64;
             }
         }
         struct PointText
@@ -1545,8 +1548,27 @@ namespace CF_DynamicsNAV_Tools
                 labelFormat = LabelFormat;
             }
 
-            Label label = new Label(LabelFormat, Base64String, addContent);
+            Label label = new Label(LabelFormat, Base64String, addContent, true);
 
+            EnqueueLabel(labelFormat, label);
+
+            Base64String = "";
+        }
+        public void EnqueueString(string labelFormat)
+        {
+            if (labelFormat == "")
+            {
+                labelFormat = LabelFormat;
+            }
+
+            Label label = new Label(LabelFormat, Base64String,"",false);
+
+            EnqueueLabel(labelFormat, label);
+                
+            Base64String = "";
+        }
+        private void EnqueueLabel(string labelFormat, Label label)
+        {
             switch (labelFormat)
             {
                 case "ZPL":
@@ -1556,10 +1578,7 @@ namespace CF_DynamicsNAV_Tools
                 case "IMAGE/PNG": ImageLabelQueue.Enqueue(label); break;
                 default: ImageLabelQueue.Enqueue(label); break;
             }
-            //
-            Base64String = "";
         }
-
         public string GetLastErrorMessage()
         {
             return LastErrorMessage;
@@ -1983,13 +2002,22 @@ namespace CF_DynamicsNAV_Tools
         }
         private byte[] ProcessZPLLabel(Label label)
         {
-            byte[] bytes = DecodeBase64String(label.LabelContent);
+            byte[] bytes = null;
 
-            string text = Encoding.ASCII.GetString(bytes);
-            string[] textarray = text.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            textarray[textarray.Length - 1] = label.AdditionalContent.Replace("|", "\n") + Environment.NewLine + "^XZ\n";
-            text = string.Join("\n", textarray);
-            bytes = Encoding.ASCII.GetBytes(text);
+            if (label.isBase64)
+            {
+                bytes = DecodeBase64String(label.LabelContent);
+
+                string text = Encoding.ASCII.GetString(bytes);
+                string[] textarray = text.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                textarray[textarray.Length - 1] = label.AdditionalContent.Replace("|", "\n") + Environment.NewLine + "^XZ\n";
+                text = string.Join("\n", textarray);
+                bytes = Encoding.ASCII.GetBytes(text);
+            }
+            else
+            {
+                bytes = Encoding.ASCII.GetBytes(label.LabelContent);
+            }
 
             return bytes;
         }
