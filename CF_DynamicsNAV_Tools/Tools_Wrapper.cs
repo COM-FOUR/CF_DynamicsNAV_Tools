@@ -2016,7 +2016,7 @@ namespace CF_DynamicsNAV_Tools
             }
             else
             {
-                bytes = Encoding.ASCII.GetBytes(label.LabelContent);
+                bytes = Encoding.UTF8.GetBytes(label.LabelContent);
             }
 
             return bytes;
