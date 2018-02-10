@@ -522,11 +522,12 @@ namespace CF_DynamicsNAV_Tools.MiscClasses
                 //CultureInfo ci = new CultureInfo(language.Replace("_", "-"));
                 CultureInfo ci = new CultureInfo("en-GB");
 
-                SortedList<string, double> result = new SortedList<string, double>();
-
-                result.Add("mfnreferralFee", Double.Parse(ReferralFee.amount, ci));
-                result.Add("mfnfixedClosingFee", Double.Parse(FixedClosingFee.amount, ci));
-                result.Add("mfnvariableClosingFee", Double.Parse(VariableClosingFee.amount, ci));
+                SortedList<string, double> result = new SortedList<string, double>
+                {
+                    { "mfnreferralFee", Double.Parse(ReferralFee.amount, ci) },
+                    { "mfnfixedClosingFee", Double.Parse(FixedClosingFee.amount, ci) },
+                    { "mfnvariableClosingFee", Double.Parse(VariableClosingFee.amount, ci) }
+                };
 
                 return result;
             }

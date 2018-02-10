@@ -51,6 +51,15 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\AmazonTools.cs" />
+    <Compile Include="Classes\Interfaces.cs" />
+    <Compile Include="Classes\LabelPrinting.cs" />
+    <Compile Include="Classes\MeinPaketTools.cs" />
+    <Compile Include="Classes\MiscTools.cs" />
+    <Compile Include="Classes\PictureSelectionManager.cs" />
+    <Compile Include="Classes\PictureUploadManager.cs" />
+    <Compile Include="Classes\TextEditor.cs" />
+    <Compile Include="Classes\WebTools.cs" />
     <Compile Include="DirectoryExplorer\Controls\ExplorerErrorEventArgs.cs" />
     <Compile Include="DirectoryExplorer\Controls\ExplorerTreeView.cs" />
     <Compile Include="DirectoryExplorer\Converters\FileSystemNodeImageConverter.cs" />
@@ -72,6 +81,8 @@
     <Compile Include="MiscClasses\AFNFees.cs" />
     <Compile Include="MiscClasses\BrowserBehavior.cs" />
     <Compile Include="MiscClasses\DragAdorner.cs" />
+    <Compile Include="MiscClasses\ImageEntry.cs" />
+    <Compile Include="MiscClasses\RelayCommand.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
