@@ -28,8 +28,6 @@ namespace CF_DynamicsNAV_Tools
         private Queue<Label> ZPLLabelQueue;
         private Queue<Label> ImageLabelQueue;
         private string[] zplLines;
-        private Margins margins;
-        private bool marginSet = false;
 
         public LabelPrinting() { }
 
@@ -76,21 +74,6 @@ namespace CF_DynamicsNAV_Tools
                 RotationAngle = angle;
                 Point = new Point(x, y);
                 Text = text;
-            }
-        }
-        struct Margins
-        {
-            public int Left;
-            public int Right;
-            public int Top;
-            public int Bottom;
-
-            public Margins(int left, int right, int top, int bottom)
-            {
-                Left = left;
-                Right = right;
-                Top = top;
-                Bottom = bottom;
             }
         }
         #endregion
@@ -210,11 +193,6 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
-        public void SetMargins(int left, int right, int top, int bottom)
-        {
-            margins = new Margins(left, right, top, bottom);
-            marginSet = true;
-        }
         public bool PrintLabelFromFile(string fileName)
         {
             bool result = false;
@@ -241,6 +219,7 @@ namespace CF_DynamicsNAV_Tools
             return result;
         }
         #endregion
+
         #region ImageLabel-Handling
         private bool PrintImageLabels()
         {
@@ -255,14 +234,6 @@ namespace CF_DynamicsNAV_Tools
                 }
 
                 pd.DefaultPageSettings.Landscape = false;
-
-                if (marginSet)
-                {
-                    pd.PrinterSettings.DefaultPageSettings.Margins.Left = margins.Left;
-                    pd.PrinterSettings.DefaultPageSettings.Margins.Right = margins.Right;
-                    pd.PrinterSettings.DefaultPageSettings.Margins.Top = margins.Top;
-                    pd.PrinterSettings.DefaultPageSettings.Margins.Bottom = margins.Bottom;
-                }
 
                 pd.PrintPage += Pd_PrintPage;
 
@@ -456,6 +427,7 @@ namespace CF_DynamicsNAV_Tools
             return result; ;
         }
         #endregion
+
         #region ZPLLabel-Handling
         private bool PrintZPLLabels()
         {

@@ -210,7 +210,6 @@ namespace CF_DynamicsNAV_Tools
         string GetZPLLine(int key, ref string addStr);
         bool ImageLabelToFile(string fileName);
         void EnqueueBase64String2(string labelFormat, string addContent);
-        void SetMargins(int left, int right, int top, int bottom);
         bool PrintLabelFromFile(string fileName);
         void EnqueueString(string labelFormat);
     }
