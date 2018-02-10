@@ -196,10 +196,10 @@ namespace CF_DynamicsNAV_Tools
     /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("506399AC-E2C1-48B0-A967-341AFF971BBD")]
-    public interface iLabelPrinting
+    public interface ILabelPrinting
     {
         void Init(string labelFormat, string printerName, string zplprinterName, int xOffset, int yOffset);
-        void AddToBase64String(string textPart);
+        void AddToLabelContent(string textPart);
         void ClearBase64String();
         string GetLastErrorMessage();
         bool PrintLabel(bool directPrinting);
@@ -208,10 +208,12 @@ namespace CF_DynamicsNAV_Tools
         bool PrintZPLCodeToFile(string fileName);
         int GetZPLLines();
         string GetZPLLine(int key, ref string addStr);
-        bool ImageLabelToFile(string fileName);
+        bool PrintImageLabelToFile(string fileName);
         void EnqueueBase64String2(string labelFormat, string addContent);
+        void EnqueueBase64String3(string id, string labelFormat, string addContent);
+        void EnqueueString(string id, string labelFormat);
+        bool ExportQueue(string exportPath);
         bool PrintLabelFromFile(string fileName);
-        void EnqueueString(string labelFormat);
     }
     #endregion
 }

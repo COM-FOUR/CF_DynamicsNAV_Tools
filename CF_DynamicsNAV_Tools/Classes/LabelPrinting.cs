@@ -16,9 +16,9 @@ namespace CF_DynamicsNAV_Tools
     /// </summary>
     [ClassInterface(ClassInterfaceType.None)]
     [Guid("BAF80517-EB2F-4642-AAD8-68AB3C44D548")]
-    public class LabelPrinting : iLabelPrinting
+    public class LabelPrinting : ILabelPrinting
     {
-        private string Base64String = "";
+        private string LabelContent = "";
         private string LabelFormat = "";
         private string PrinterName = "";
         private string ZPLPrinterName = "";
@@ -78,14 +78,15 @@ namespace CF_DynamicsNAV_Tools
         }
         #endregion
 
+        #region common methods
         #region com-exposed common methods
-        public void AddToBase64String(string textPart)
+        public void AddToLabelContent(string textPart)
         {
-            Base64String += textPart;
+            LabelContent += textPart;
         }
         public void ClearBase64String()
         {
-            Base64String = "";
+            LabelContent = "";
         }
         public void EnqueueBase64String(string labelFormat)
         {
@@ -93,41 +94,33 @@ namespace CF_DynamicsNAV_Tools
         }
         public void EnqueueBase64String2(string labelFormat, string addContent)
         {
-            if (labelFormat == "")
-            {
-                labelFormat = LabelFormat;
-            }
-
-            Label label = new Label("",LabelFormat, Base64String, addContent, true);
-
-            EnqueueLabel(labelFormat, label);
-
-            Base64String = "";
+            EnqueueBase64String3("", labelFormat, addContent);
         }
-        public void EnqueueString(string labelFormat)
+        public void EnqueueBase64String3(string id, string labelFormat, string addContent)
         {
             if (labelFormat == "")
             {
                 labelFormat = LabelFormat;
             }
 
-            Label label = new Label("",LabelFormat, Base64String, "", false);
+            Label label = new Label(id, LabelFormat, LabelContent, addContent, true);
 
             EnqueueLabel(labelFormat, label);
 
-            Base64String = "";
+            ClearBase64String();
         }
-        private void EnqueueLabel(string labelFormat, Label label)
+        public void EnqueueString(string id, string labelFormat)
         {
-            switch (labelFormat)
+            if (labelFormat == "")
             {
-                case "ZPL":
-                case "ZPL203":
-                case "APPLICATION/ZPL": ZPLLabelQueue.Enqueue(label); break;
-                case "PNG":
-                case "IMAGE/PNG": ImageLabelQueue.Enqueue(label); break;
-                default: ImageLabelQueue.Enqueue(label); break;
+                labelFormat = LabelFormat;
             }
+
+            Label label = new Label("", LabelFormat, LabelContent, "", false);
+
+            EnqueueLabel(labelFormat, label);
+
+            ClearBase64String();
         }
         public string GetLastErrorMessage()
         {
@@ -171,28 +164,6 @@ namespace CF_DynamicsNAV_Tools
 
             return result;
         }
-        #endregion
-
-        #region Image Methods
-        #region com-exposed Image Methods
-        public bool ImageLabelToFile(string fileName)
-        {
-            bool result = false;
-            try
-            {
-                Label label = ImageLabelQueue.Dequeue();
-                Image image = Base64StringToImage(label.LabelContent);
-
-                image.Save(fileName);
-                result = true;
-            }
-            catch (Exception e)
-            {
-                LastErrorMessage = e.Message;
-            }
-
-            return result;
-        }
         public bool PrintLabelFromFile(string fileName)
         {
             bool result = false;
@@ -216,6 +187,33 @@ namespace CF_DynamicsNAV_Tools
                 LastErrorMessage = e.Message;
             }
 
+            return result;
+        }
+        #endregion
+
+        private void EnqueueLabel(string labelFormat, Label label)
+        {
+            switch (labelFormat)
+            {
+                case "ZPL":
+                case "ZPL203":
+                case "APPLICATION/ZPL": ZPLLabelQueue.Enqueue(label); break;
+                case "PNG":
+                case "IMAGE/PNG": ImageLabelQueue.Enqueue(label); break;
+                default: ImageLabelQueue.Enqueue(label); break;
+            }
+        }
+        #endregion
+        
+        #region Image Methods
+        #region com-exposed Image Methods
+        public bool PrintImageLabelToFile(string fileName)
+        {
+            bool result = false;
+
+            Label label = ImageLabelQueue.Dequeue();
+            result = ImageLabelToFile(fileName, label);
+            
             return result;
         }
         #endregion
@@ -335,12 +333,41 @@ namespace CF_DynamicsNAV_Tools
             }
 
         }
+        private bool ImageLabelToFile(string fileName, Label label)
+        {
+            bool result = false;
+
+            try
+            {
+                Image image = Base64StringToImage(label.LabelContent);
+                image.Save(fileName);
+
+                result = true;
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
+        }
         private bool ExportImageLabels(string exportPath)
         {
             bool result = false;
 
-            if (ImageLabelQueue.Count > 0)
+            DirectoryInfo di = new DirectoryInfo(exportPath);
+            if (di.Exists)
             {
+                result = true;
+
+                while (ImageLabelQueue.Count > 0)
+                {
+                    Label label = ImageLabelQueue.Dequeue();
+                    if (!ImageLabelToFile(String.Format("{0}\\{1}.img", di.FullName, label.LabelId), label))
+                    {
+                        result = false;
+                    }
+                }
             }
 
             return result;
@@ -378,19 +405,9 @@ namespace CF_DynamicsNAV_Tools
         public bool PrintZPLCodeToFile(string fileName)
         {
             bool result = false;
-
-            try
-            {
-                Label label = ZPLLabelQueue.Dequeue();
-                byte[] bytes = ProcessZPLLabel(label);
-
-                File.WriteAllBytes(fileName, bytes);
-                result = true;
-            }
-            catch (Exception e)
-            {
-                LastErrorMessage = e.Message;
-            }
+            
+            Label label = ZPLLabelQueue.Dequeue();
+            result = ZPLCodeToFile(fileName, label);
 
             return result;
         }
@@ -465,7 +482,22 @@ namespace CF_DynamicsNAV_Tools
         private bool ExportZPLLabels(string exportPath)
         {
             bool result = false;
-            
+
+            DirectoryInfo di = new DirectoryInfo(exportPath);
+            if (di.Exists)
+            {
+                result = true;
+
+                while (ZPLLabelQueue.Count > 0)
+                {
+                    Label label = ZPLLabelQueue.Dequeue();
+                    if (!ZPLCodeToFile(String.Format("{0}\\{1}.zpl", di.FullName, label.LabelId), label))
+                    {
+                        result = false;
+                    }
+                }
+            }
+
             return result;
         }
         private byte[] ProcessZPLLabel(Label label)
@@ -508,6 +540,24 @@ namespace CF_DynamicsNAV_Tools
                 Com.SharpZebra.Printing.SpoolPrinter spoolPrinter = new Com.SharpZebra.Printing.SpoolPrinter(settings);
                 spoolPrinter.Print(bytes);
 
+                result = true;
+            }
+            catch (Exception e)
+            {
+                LastErrorMessage = e.Message;
+            }
+
+            return result;
+        }
+        private bool ZPLCodeToFile(string fileName, Label label)
+        {
+            bool result = false;
+
+            try
+            {
+                byte[] bytes = ProcessZPLLabel(label);
+
+                File.WriteAllBytes(fileName, bytes);
                 result = true;
             }
             catch (Exception e)
