@@ -84,7 +84,7 @@ namespace CF_DynamicsNAV_Tools
         {
             LabelContent += textPart;
         }
-        public void ClearBase64String()
+        public void ClearLabelContent()
         {
             LabelContent = "";
         }
@@ -104,10 +104,9 @@ namespace CF_DynamicsNAV_Tools
             }
 
             Label label = new Label(id, LabelFormat, LabelContent, addContent, true);
-
             EnqueueLabel(labelFormat, label);
 
-            ClearBase64String();
+            ClearLabelContent();
         }
         public void EnqueueString(string id, string labelFormat)
         {
@@ -116,11 +115,11 @@ namespace CF_DynamicsNAV_Tools
                 labelFormat = LabelFormat;
             }
 
-            Label label = new Label("", LabelFormat, LabelContent, "", false);
+            Label label = new Label(id, LabelFormat, LabelContent, "", false);
 
             EnqueueLabel(labelFormat, label);
 
-            ClearBase64String();
+            ClearLabelContent();
         }
         public string GetLastErrorMessage()
         {
@@ -484,18 +483,18 @@ namespace CF_DynamicsNAV_Tools
             bool result = false;
 
             DirectoryInfo di = new DirectoryInfo(exportPath);
-            if (di.Exists)
+            if (di.Exists & ZPLLabelQueue.Count > 0)
             {
                 result = true;
 
-                while (ZPLLabelQueue.Count > 0)
+                do
                 {
                     Label label = ZPLLabelQueue.Dequeue();
                     if (!ZPLCodeToFile(String.Format("{0}\\{1}.zpl", di.FullName, label.LabelId), label))
                     {
                         result = false;
                     }
-                }
+                } while (ZPLLabelQueue.Count > 0);
             }
 
             return result;
@@ -556,7 +555,10 @@ namespace CF_DynamicsNAV_Tools
             try
             {
                 byte[] bytes = ProcessZPLLabel(label);
-
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
                 File.WriteAllBytes(fileName, bytes);
                 result = true;
             }

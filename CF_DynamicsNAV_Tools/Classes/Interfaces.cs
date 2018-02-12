@@ -200,7 +200,7 @@ namespace CF_DynamicsNAV_Tools
     {
         void Init(string labelFormat, string printerName, string zplprinterName, int xOffset, int yOffset);
         void AddToLabelContent(string textPart);
-        void ClearBase64String();
+        void ClearLabelContent();
         string GetLastErrorMessage();
         bool PrintLabel(bool directPrinting);
         bool PrintQueue();
