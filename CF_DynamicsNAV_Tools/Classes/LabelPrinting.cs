@@ -171,12 +171,12 @@ namespace CF_DynamicsNAV_Tools
             {
                 byte[] bytes = File.ReadAllBytes(fileName);
                 FileInfo fi = new FileInfo(fileName);
-
+                
                 switch (fi.Extension)
                 {
-                    case "png": break;
-                    case "txt":
-                    case "zpl": result = PrintZPLBytes(bytes); break;
+                    case ".png": break;
+                    case ".txt":
+                    case ".zpl": result = PrintZPLBytes(bytes); break;
                     default:
                         break;
                 }
