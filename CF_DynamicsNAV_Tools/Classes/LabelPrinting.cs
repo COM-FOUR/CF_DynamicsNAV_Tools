@@ -486,7 +486,7 @@ namespace CF_DynamicsNAV_Tools
             if (di.Exists & ZPLLabelQueue.Count > 0)
             {
                 result = true;
-
+                
                 do
                 {
                     Label label = ZPLLabelQueue.Dequeue();
@@ -551,7 +551,7 @@ namespace CF_DynamicsNAV_Tools
         private bool ZPLCodeToFile(string fileName, Label label)
         {
             bool result = false;
-
+            
             try
             {
                 byte[] bytes = ProcessZPLLabel(label);
