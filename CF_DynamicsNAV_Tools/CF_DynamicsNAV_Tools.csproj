@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\AmazonTools.cs" />
+    <Compile Include="Classes\FileTools.cs" />
     <Compile Include="Classes\Interfaces.cs" />
     <Compile Include="Classes\LabelPrinting.cs" />
     <Compile Include="Classes\MeinPaketTools.cs" />
