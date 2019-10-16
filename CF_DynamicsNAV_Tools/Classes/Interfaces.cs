@@ -235,5 +235,22 @@ namespace CF_DynamicsNAV_Tools
         string GetDownloadUrl();
         bool DownloadAndExportStamps(string url, string folderPath, string refNo);
     }
+
+    /// <summary>
+    /// Translations with DeepL
+    /// </summary>
+    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    [Guid("E1723DF1-14E6-499F-9196-FBDA770A2383")]
+    public interface iTranslation
+    {
+        void SetAccessKey(string key);
+        void SetSourceLanguage(string language);
+        void AddSourceText(string text);
+        void ClearSourceText();
+        int GetTranslatedLinesCount();
+        string GetTranslatedLines(int lineNumber);
+        string GetErrorMessage();
+        bool GetTranslation(string language);
+    }
     #endregion
 }
