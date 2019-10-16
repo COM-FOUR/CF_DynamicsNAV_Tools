@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.IO;
 
 namespace CF_DynamicsNAV_Tools
 {
@@ -54,6 +55,7 @@ namespace CF_DynamicsNAV_Tools
 
             formVisible = false;
 
+            pmf = new PictureManagerForm();
         }
         public bool Visible()
         {

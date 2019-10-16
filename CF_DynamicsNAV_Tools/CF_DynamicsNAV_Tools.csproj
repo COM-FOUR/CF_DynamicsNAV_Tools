@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CF_DynamicsNAV_Tools</RootNamespace>
     <AssemblyName>CF_DynamicsNAV_Tools</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,6 +35,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CF.Shipping">
+      <HintPath>..\..\..\..\Visual Studio 2017\Projects\CF.Shipping\CF.Shipping\bin\Debug\CF.Shipping.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -59,6 +63,7 @@
     <Compile Include="Classes\MiscTools.cs" />
     <Compile Include="Classes\PictureSelectionManager.cs" />
     <Compile Include="Classes\PictureUploadManager.cs" />
+    <Compile Include="Classes\StampPrinting.cs" />
     <Compile Include="Classes\TextEditor.cs" />
     <Compile Include="Classes\WebTools.cs" />
     <Compile Include="DirectoryExplorer\Controls\ExplorerErrorEventArgs.cs" />

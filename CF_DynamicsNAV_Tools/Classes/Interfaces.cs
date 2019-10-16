@@ -52,6 +52,7 @@ namespace CF_DynamicsNAV_Tools
         bool DoOpen(string method, string url, bool async, string user, string password);
         bool DoSend(string body);
         void ShowXMLHTTPResponseText(MSXML2.ServerXMLHTTP60 xml);
+        int GetByteCount(string inString);
     }
 
     /// <summary>
@@ -192,7 +193,7 @@ namespace CF_DynamicsNAV_Tools
     }
 
     /// <summary>
-    /// Tools for Printing Labels for integration into DynamicsNAV 
+    /// Tools for Printing Prime-Labels for integration into DynamicsNAV 
     /// </summary>
     [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
     [Guid("506399AC-E2C1-48B0-A967-341AFF971BBD")]
@@ -214,6 +215,25 @@ namespace CF_DynamicsNAV_Tools
         void EnqueueString(string id, string labelFormat);
         bool ExportQueue(string exportPath);
         bool PrintLabelFromFile(string fileName);
+    }
+
+    /// <summary>
+    /// Tools for Printing Internetmarke Stamps for integration into DynamicsNAV 
+    /// </summary>
+    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    [Guid("119C8D42-967C-4D54-B74B-D2B94FCE4AED")]
+    public interface IStampPrinting
+    {
+        void Init(string pId, string kPhase, string sKey, string uId, string pword);
+        void SetSender(string name, string name2, string street, string houseNo, string postCode, string city, string countryCode);
+        void AddReceiver(string name, string name2, string street, string houseNo, string postCode, string city, string countryCode, string ref1, string ref2, int prodId, int value);
+        bool RetrieveAndPrintStamps(string printerName);
+        void Reset();
+        string GetLastMessage();
+        bool RetrieveAndExportStamps(string folderPath);
+        double GetWalletBalance();
+        string GetDownloadUrl();
+        bool DownloadAndExportStamps(string url, string folderPath, string refNo);
     }
     #endregion
 }

@@ -334,5 +334,9 @@ namespace CF_DynamicsNAV_Tools
         {
             MessageBox.Show(xml.responseText);
         }
+        public int GetByteCount(string inString)
+        {
+            return UTF8Encoding.UTF8.GetByteCount(inString);
+        }
     }
 }
